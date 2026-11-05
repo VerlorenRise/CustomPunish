@@ -91,6 +91,7 @@ TabCompleter {
                 case BAN_IP -> "&4&l[IP-БАН]";
                 case MUTE -> "&e&l[МУТ]";
                 case KICK -> "&7&l[КИК]";
+                case WARN -> "&6&l[ВАРН]";
             };
             String statusBadge = p.getType() == PunishmentType.KICK ? "&7(Кик)" : (p.isActive() ? (p.isExpired() ? "&8(Истек)" : "&a&l(АКТИВНО)") : (p.getUnpunishedAt() != null ? "&6(Снято)" : "&7(Неактивно)"));
             String durationStr = TimeUtil.formatDuration(p.getExpiresAt() <= 0L ? -1L : p.getExpiresAt() - p.getCreatedAt());

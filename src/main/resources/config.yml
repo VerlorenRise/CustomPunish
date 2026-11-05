@@ -119,9 +119,11 @@ messages:
     banip: "&4[Наказания] &fИгрок &e{player} &fбыл &4заблокирован по IP &fмодератором &b{operator}&f. Причина: &e{reason} &7({duration})"
     mute: "&6[Наказания] &fИгрок &e{player} &fбыл &6лишен чата &fмодератором &b{operator}&f. Причина: &e{reason} &7({duration})"
     kick: "&e[Наказания] &fИгрок &e{player} &fбыл &eисключен &fмодератором &b{operator}&f. Причина: &e{reason}"
+    warn: "&c[Наказания] &e{player} &fполучил варн &e[{count}/3]&f от модератора &b{operator}&f. Причина: &e{reason}"
     unban: "&a[Наказания] &b{operator} &fразблокировал игрока &e{player}&f. Причина: &7{reason}"
     unbanip: "&a[Наказания] &b{operator} &fразблокировал IP &e{ip}&f. Причина: &7{reason}"
     unmute: "&a[Наказания] &b{operator} &fснял блокировку чата с &e{player}&f. Причина: &7{reason}"
+    unwarn: "&a[Наказания] &b{operator} &fснял варн с игрока &e{player}&f. Причина: &7{reason}"
 
     # Тихий режим (флаг -s) — отправляется только персоналу с правом punish.notifications
     silent:
@@ -129,6 +131,7 @@ messages:
       banip: "&8[&7Тихо&8] &e{player} &7заблокирован по IP модератором &b{operator}&7. Причина: &f{reason} &8({duration})"
       mute: "&8[&7Тихо&8] &e{player} &7замучен модератором &b{operator}&7. Причина: &f{reason} &8({duration})"
       kick: "&8[&7Тихо&8] &e{player} &7исключен модератором &b{operator}&7. Причина: &f{reason}"
+      warn: "&7[Тихо] &e{player} &7получил варн &e[{count}/3]&7 от &b{operator}&7. Причина: &f{reason}"
 
   # Личные уведомления игроку
   notification:
@@ -140,6 +143,8 @@ messages:
       - "&fСрок: &e{duration}"
       - "&c&m----------------------------------------"
     unmuted: "&aС вас была снята блокировка чата. Приятной игры!"
+    warn-received-chat: "&cВы получили варн &e[{count}/3]&c от &b{operator}&c. Причина: &f{reason}"
+    unwarned: "&aС вас было снято предупреждение. Причина: &7{reason}"
 
   # Подсказки по использованию команд
   usage:
@@ -150,6 +155,11 @@ messages:
     mute: "&6Использование: &e/mute <игрок> [срок] [причина] [-s]"
     unmute: "&6Использование: &e/unmute <игрок> [причина]"
     kick: "&6Использование: &e/kick <игрок> [причина] [-s]"
+    warn: "&6Использование: &e/{label} <игрок> [причина] [-s]"
+    unwarn: "&6Использование: &e/{label} <игрок> [ID | причина]"
+    warnoff: "&6Использование: &e/{label} <игрок> [причина] [-s]"
+    banoff: "&6Использование: &e/{label} <игрок> [срок] [причина] [-s]"
+    muteoff: "&6Использование: &e/{label} <игрок> [срок] [причина] [-s]"
     history: "&6Использование: &e/history <игрок> [страница]"
 
   # Сообщения об успехе
@@ -158,9 +168,11 @@ messages:
     banip-issued: "&aIP-блокировка для &e{target} &aуспешно установлена."
     mute-issued: "&aИгрок &e{player} &aуспешно замучен."
     kick-issued: "&aИгрок &e{player} &aуспешно исключен с сервера."
+    warn-issued: "&aПредупреждение игроку &e{player} &aуспешно выдано!"
     unban-done: "&aИгрок &e{player} &aуспешно разблокирован."
     unbanip-done: "&aIP-адрес &e{ip} &aуспешно разблокирован."
     unmute-done: "&aС игрока &e{player} &aуспешно снята блокировка чата."
+    unwarn-issued: "&aПредупреждение с игрока &e{player} &aуспешно снято!"
     reload: "&aКонфигурация плагина CustomPunish успешно перезагружена!"
 
   # Ошибки
@@ -176,3 +188,4 @@ messages:
     not-banned: "&cИгрок &e{player} &cне имеет активных блокировок!"
     not-banned-ip: "&cДля IP-адреса &e{ip} &cнет активных блокировок!"
     not-muted: "&cУ игрока &e{player} &cнет активной блокировки чата!"
+    unwarn-not-found: "&cУ игрока &e{player} &cнет активных предупреждений!"

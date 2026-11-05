@@ -368,6 +368,107 @@ public class DatabaseManager {
         }, this.asyncExecutor);
     }
 
+    public CompletableFuture<List<Punishment>> getActiveWarns(UUID targetUuid, String targetName) {
+        return CompletableFuture.supplyAsync(() -> {
+            ArrayList<Punishment> list = new ArrayList<>();
+            long now = System.currentTimeMillis();
+            String sql = targetUuid != null ?
+                "SELECT * FROM punishments WHERE (target_uuid = ? OR LOWER(target_name) = LOWER(?)) AND punish_type = 'WARN' AND active = 1 AND (expires_at = -1 OR expires_at > ?) ORDER BY id ASC;" :
+                "SELECT * FROM punishments WHERE LOWER(target_name) = LOWER(?) AND punish_type = 'WARN' AND active = 1 AND (expires_at = -1 OR expires_at > ?) ORDER BY id ASC;";
+            try (PreparedStatement ps = this.getConnection().prepareStatement(sql)) {
+                if (targetUuid != null) {
+                    ps.setString(1, targetUuid.toString());
+                    ps.setString(2, targetName);
+                    ps.setLong(3, now);
+                } else {
+                    ps.setString(1, targetName);
+                    ps.setLong(2, now);
+                }
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        list.add(this.mapPunishment(rs));
+                    }
+                }
+            } catch (SQLException e) {
+                this.plugin.getLogger().log(Level.SEVERE, "Ошибка получения активных варнов: " + targetName, e);
+            }
+            return list;
+        }, this.asyncExecutor);
+    }
+
+    public CompletableFuture<Integer> getActiveWarnsCount(UUID targetUuid, String targetName) {
+        return this.getActiveWarns(targetUuid, targetName).thenApply(List::size);
+    }
+
+    public CompletableFuture<Boolean> deactivatePunishmentById(int id, UUID unpunisherUuid, String unpunisherName, String reason) {
+        return CompletableFuture.supplyAsync(() -> {
+            String sql = "UPDATE punishments SET active = 0, unpunished_by_uuid = ?, unpunished_by_name = ?, unpunish_reason = ?, unpunished_at = ? WHERE id = ? AND active = 1;";
+            try (PreparedStatement ps = this.getConnection().prepareStatement(sql)) {
+                ps.setString(1, unpunisherUuid != null ? unpunisherUuid.toString() : null);
+                ps.setString(2, unpunisherName);
+                ps.setString(3, reason);
+                ps.setLong(4, System.currentTimeMillis());
+                ps.setInt(5, id);
+                int updated = ps.executeUpdate();
+                return updated > 0;
+            } catch (SQLException e) {
+                this.plugin.getLogger().log(Level.SEVERE, "Ошибка деактивации наказания #" + id, e);
+                return false;
+            }
+        }, this.asyncExecutor);
+    }
+
+    public CompletableFuture<Boolean> deactivateLastWarn(UUID targetUuid, String targetName, UUID unpunisherUuid, String unpunisherName, String reason) {
+        return this.getActiveWarns(targetUuid, targetName).thenCompose(warns -> {
+            if (warns.isEmpty()) {
+                return CompletableFuture.completedFuture(false);
+            }
+            Punishment lastWarn = warns.get(warns.size() - 1);
+            return this.deactivatePunishmentById(lastWarn.getId(), unpunisherUuid, unpunisherName, reason);
+        });
+    }
+
+    public CompletableFuture<Integer> deactivateAllActiveWarns(UUID targetUuid, String targetName, UUID unpunisherUuid, String unpunisherName, String reason) {
+        return CompletableFuture.supplyAsync(() -> {
+            long now = System.currentTimeMillis();
+            String sql = targetUuid != null ?
+                "UPDATE punishments SET active = 0, unpunished_by_uuid = ?, unpunished_by_name = ?, unpunish_reason = ?, unpunished_at = ? WHERE (target_uuid = ? OR LOWER(target_name) = LOWER(?)) AND punish_type = 'WARN' AND active = 1;" :
+                "UPDATE punishments SET active = 0, unpunished_by_uuid = ?, unpunished_by_name = ?, unpunish_reason = ?, unpunished_at = ? WHERE LOWER(target_name) = LOWER(?) AND punish_type = 'WARN' AND active = 1;";
+            try (PreparedStatement ps = this.getConnection().prepareStatement(sql)) {
+                ps.setString(1, unpunisherUuid != null ? unpunisherUuid.toString() : null);
+                ps.setString(2, unpunisherName);
+                ps.setString(3, reason);
+                ps.setLong(4, now);
+                if (targetUuid != null) {
+                    ps.setString(5, targetUuid.toString());
+                    ps.setString(6, targetName);
+                } else {
+                    ps.setString(5, targetName);
+                }
+                return ps.executeUpdate();
+            } catch (SQLException e) {
+                this.plugin.getLogger().log(Level.SEVERE, "Ошибка снятия всех варнов: " + targetName, e);
+                return 0;
+            }
+        }, this.asyncExecutor);
+    }
+
+    public CompletableFuture<List<String>> getAllKnownPlayerNames() {
+        return CompletableFuture.supplyAsync(() -> {
+            ArrayList<String> names = new ArrayList<>();
+            String sql = "SELECT DISTINCT name FROM player_data ORDER BY last_seen DESC LIMIT 200;";
+            try (PreparedStatement ps = this.getConnection().prepareStatement(sql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    names.add(rs.getString("name"));
+                }
+            } catch (SQLException e) {
+                this.plugin.getLogger().log(Level.SEVERE, "Ошибка получения списка игроков", e);
+            }
+            return names;
+        }, this.asyncExecutor);
+    }
+
     private Punishment mapPunishment(ResultSet rs) throws SQLException {
         int id = rs.getInt("id");
         String uuidStr = rs.getString("target_uuid");

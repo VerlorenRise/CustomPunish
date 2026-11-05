@@ -1,13 +1,11 @@
-/*
- * Decompiled with CFR 0.152.
- */
 package ru.projectn4.punish.model;
 
 public enum PunishmentType {
     BAN("БАН", "заблокирован"),
     BAN_IP("IP-БАН", "заблокирован по IP"),
     MUTE("МУТ", "замучен"),
-    KICK("КИК", "исключен");
+    KICK("КИК", "исключен"),
+    WARN("ВАРН", "получил предупреждение");
 
     private final String displayName;
     private final String actionName;
@@ -25,4 +23,3 @@ public enum PunishmentType {
         return this.actionName;
     }
 }
-

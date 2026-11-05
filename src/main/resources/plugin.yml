@@ -44,6 +44,26 @@ commands:
     description: Управление плагином наказаний
     usage: /punish [reload|help]
     permission: punish.reload
+  warn:
+    description: Выдать предупреждение игроку
+    usage: /warn <игрок> [причина] [-s]
+    permission: punish.warn
+  unwarn:
+    description: Снять предупреждение с игрока
+    usage: /unwarn <игрок> [ID | причина]
+    permission: punish.unwarn
+  warnoff:
+    description: Выдать предупреждение оффлайн-игроку
+    usage: /warnoff <игрок> [причина] [-s]
+    permission: punish.warnoff
+  banoff:
+    description: Заблокировать оффлайн-игрока
+    usage: /banoff <игрок> [срок] [причина] [-s]
+    permission: punish.banoff
+  muteoff:
+    description: Заблокировать чат оффлайн-игроку
+    usage: /muteoff <игрок> [срок] [причина] [-s]
+    permission: punish.muteoff
 
 permissions:
   punish.admin:
@@ -88,6 +108,16 @@ permissions:
   punish.reload:
     description: Право на команду /punish reload
     default: op
+  punish.warn:
+    description: Право на выдачу предупреждений
+  punish.unwarn:
+    description: Право на снятие предупреждений
+  punish.warnoff:
+    description: Право на оффлайн-предупреждения
+  punish.banoff:
+    description: Право на оффлайн-бан
+  punish.muteoff:
+    description: Право на оффлайн-мут
   punish.limit.ban.15m:
     description: Лимит бана 15 минут
     default: false

@@ -43,6 +43,16 @@ public class PunishmentService {
     private final Map<UUID, Punishment> activeMutesByUuid = new ConcurrentHashMap<UUID, Punishment>();
     private final Map<String, Punishment> activeMutesByName = new ConcurrentHashMap<String, Punishment>();
 
+    public static final long WARN_DURATION_MILLIS = 30L * 24L * 60L * 60L * 1000L;
+
+    public DatabaseManager getDatabaseManager() {
+        return this.databaseManager;
+    }
+
+    public ConfigManager getConfigManager() {
+        return this.configManager;
+    }
+
     public PunishmentService(JavaPlugin plugin, DatabaseManager databaseManager, ConfigManager configManager) {
         this.plugin = plugin;
         this.databaseManager = databaseManager;
@@ -140,22 +150,25 @@ public class PunishmentService {
     }
 
     public CompletableFuture<Boolean> ban(CommandSender operator, String targetName, UUID targetUuid, String targetIp, long durationMillis, String reason, boolean silent) {
-        UUID uUID;
-        if (operator instanceof Player) {
-            Player p = (Player)operator;
-            uUID = p.getUniqueId();
-        } else {
-            uUID = CONSOLE_UUID;
+        if (targetUuid == null) {
+            return this.databaseManager.getPlayerDataByName(targetName).thenCompose(optData -> {
+                UUID resolvedUuid = optData.map(PlayerData::getUuid).orElse(null);
+                String resolvedIp = targetIp != null ? targetIp : optData.map(PlayerData::getLastIp).orElse(null);
+                return this.executeBan(operator, targetName, resolvedUuid, resolvedIp, durationMillis, reason, silent);
+            });
         }
-        UUID opUuid = uUID;
+        return this.executeBan(operator, targetName, targetUuid, targetIp, durationMillis, reason, silent);
+    }
+
+    private CompletableFuture<Boolean> executeBan(CommandSender operator, String targetName, UUID targetUuid, String targetIp, long durationMillis, String reason, boolean silent) {
+        UUID opUuid = (operator instanceof Player) ? ((Player) operator).getUniqueId() : CONSOLE_UUID;
         String opName = operator.getName();
         long now = System.currentTimeMillis();
         long expiresAt = durationMillis <= 0L ? -1L : now + durationMillis;
         Punishment punishment = new Punishment(targetUuid, targetName, targetIp, PunishmentType.BAN, opUuid, opName, reason, now, expiresAt);
         return this.databaseManager.insertPunishment(punishment).thenApply(inserted -> {
             Bukkit.getScheduler().runTask((Plugin)this.plugin, () -> {
-                Player online;
-                Player player = online = targetUuid != null ? Bukkit.getPlayer((UUID)targetUuid) : Bukkit.getPlayerExact((String)targetName);
+                Player online = targetUuid != null ? Bukkit.getPlayer((UUID)targetUuid) : Bukkit.getPlayerExact((String)targetName);
                 if (online != null && online.isOnline()) {
                     online.kick(this.buildBanScreen((Punishment)inserted));
                 }
@@ -212,25 +225,27 @@ public class PunishmentService {
     }
 
     public CompletableFuture<Boolean> mute(CommandSender operator, String targetName, UUID targetUuid, long durationMillis, String reason, boolean silent) {
-        UUID uUID;
-        if (operator instanceof Player) {
-            Player p = (Player)operator;
-            uUID = p.getUniqueId();
-        } else {
-            uUID = CONSOLE_UUID;
+        if (targetUuid == null) {
+            return this.databaseManager.getPlayerDataByName(targetName).thenCompose(optData -> {
+                UUID resolvedUuid = optData.map(PlayerData::getUuid).orElse(null);
+                return this.executeMute(operator, targetName, resolvedUuid, durationMillis, reason, silent);
+            });
         }
-        UUID opUuid = uUID;
+        return this.executeMute(operator, targetName, targetUuid, durationMillis, reason, silent);
+    }
+
+    private CompletableFuture<Boolean> executeMute(CommandSender operator, String targetName, UUID targetUuid, long durationMillis, String reason, boolean silent) {
+        UUID opUuid = (operator instanceof Player) ? ((Player) operator).getUniqueId() : CONSOLE_UUID;
         String opName = operator.getName();
         long now = System.currentTimeMillis();
         long expiresAt = durationMillis <= 0L ? -1L : now + durationMillis;
         Punishment punishment = new Punishment(targetUuid, targetName, null, PunishmentType.MUTE, opUuid, opName, reason, now, expiresAt);
         return this.databaseManager.insertPunishment(punishment).thenApply(inserted -> {
-            Player online;
             if (targetUuid != null) {
                 this.activeMutesByUuid.put(targetUuid, (Punishment)inserted);
             }
             this.activeMutesByName.put(targetName.toLowerCase(Locale.ROOT), (Punishment)inserted);
-            Player player = online = targetUuid != null ? Bukkit.getPlayer((UUID)targetUuid) : Bukkit.getPlayerExact((String)targetName);
+            Player online = targetUuid != null ? Bukkit.getPlayer((UUID)targetUuid) : Bukkit.getPlayerExact((String)targetName);
             if (online != null && online.isOnline()) {
                 this.sendMuteNotification(online, (Punishment)inserted);
             }
@@ -331,6 +346,106 @@ public class PunishmentService {
             }
             return unmuted;
         });
+    }
+
+    public CompletableFuture<Boolean> warn(CommandSender operator, String targetName, UUID targetUuid, String reason, boolean silent) {
+        if (targetUuid == null) {
+            return this.databaseManager.getPlayerDataByName(targetName).thenCompose(optData -> {
+                UUID resolvedUuid = optData.map(PlayerData::getUuid).orElse(null);
+                return this.executeWarn(operator, targetName, resolvedUuid, reason, silent);
+            });
+        }
+        return this.executeWarn(operator, targetName, targetUuid, reason, silent);
+    }
+
+    private CompletableFuture<Boolean> executeWarn(CommandSender operator, String targetName, UUID targetUuid, String reason, boolean silent) {
+        UUID opUuid = (operator instanceof Player) ? ((Player) operator).getUniqueId() : CONSOLE_UUID;
+        String opName = operator.getName();
+        long now = System.currentTimeMillis();
+        long expiresAt = now + WARN_DURATION_MILLIS;
+
+        Punishment punishment = new Punishment(targetUuid, targetName, null, PunishmentType.WARN, opUuid, opName, reason, now, expiresAt);
+        return this.databaseManager.insertPunishment(punishment).thenCompose(inserted -> {
+            return this.databaseManager.getActiveWarnsCount(targetUuid, targetName).thenCompose(warnCount -> {
+                Player online = targetUuid != null ? Bukkit.getPlayer(targetUuid) : Bukkit.getPlayerExact(targetName);
+                if (online != null && online.isOnline()) {
+                    String playerMsg = this.configManager.getMessage("notification.warn-received-chat",
+                        "&cВы получили варн &e[{count}/3]&c от &b{operator}&c. Причина: &f{reason}")
+                        .replace("{count}", String.valueOf(warnCount))
+                        .replace("{operator}", opName)
+                        .replace("{reason}", reason);
+                    online.sendMessage(MessageUtil.parse(playerMsg));
+                }
+
+                this.broadcastWarn(punishment, warnCount, silent);
+
+                if (warnCount >= 3) {
+                    Bukkit.getScheduler().runTask(this.plugin, () -> {
+                        String autoBanReason = "Превышен лимит предупреждений (3/3): " + reason;
+                        String targetIp = (online != null && online.getAddress() != null) ?
+                            online.getAddress().getAddress().getHostAddress() : null;
+
+                        this.ban(operator, targetName, targetUuid, targetIp, -1L, autoBanReason, false).thenAccept(banned -> {
+                            this.databaseManager.deactivateAllActiveWarns(targetUuid, targetName, CONSOLE_UUID, "Консоль", "Погашено баном (3/3 варнов)");
+                        });
+                    });
+                }
+                return CompletableFuture.completedFuture(true);
+            });
+        });
+    }
+
+    public CompletableFuture<Boolean> unwarn(CommandSender operator, String targetName, Integer warnId, String reason) {
+        UUID opUuid = (operator instanceof Player) ? ((Player) operator).getUniqueId() : CONSOLE_UUID;
+        String opName = operator.getName();
+
+        return this.databaseManager.getPlayerDataByName(targetName).thenCompose(optData -> {
+            UUID targetUuid = optData.map(PlayerData::getUuid).orElse(null);
+            CompletableFuture<Boolean> future = (warnId != null) ?
+                this.databaseManager.deactivatePunishmentById(warnId, opUuid, opName, reason) :
+                this.databaseManager.deactivateLastWarn(targetUuid, targetName, opUuid, opName, reason);
+
+            return future.thenApply(unwarned -> {
+                if (unwarned) {
+                    String msg = this.configManager.getMessage("broadcast.unwarn",
+                        "&a[Наказания] &b{operator} &fснял варн с игрока &e{player}&f. Причина: &7{reason}")
+                        .replace("{operator}", opName)
+                        .replace("{player}", targetName)
+                        .replace("{reason}", reason);
+                    Bukkit.broadcast(MessageUtil.parse(msg));
+
+                    Player online = targetUuid != null ? Bukkit.getPlayer(targetUuid) : Bukkit.getPlayerExact(targetName);
+                    if (online != null && online.isOnline()) {
+                        String notify = this.configManager.getMessage("notification.unwarned",
+                            "&aС вас было снято предупреждение. Причина: &7{reason}")
+                            .replace("{reason}", reason);
+                        online.sendMessage(MessageUtil.parse(notify));
+                    }
+                }
+                return unwarned;
+            });
+        });
+    }
+
+    private void broadcastWarn(Punishment punishment, int count, boolean silent) {
+        String templateKey = silent ? "broadcast.silent.warn" : "broadcast.warn";
+        String def = silent ?
+            "&7[Тихо] &e{player} &7получил варн &e[{count}/3]&7 от &b{operator}&7. Причина: &f{reason}" :
+            "&c[Наказания] &e{player} &fполучил варн &e[{count}/3]&f от модератора &b{operator}&f. Причина: &e{reason}";
+        String template = this.configManager.getMessage(templateKey, def)
+            .replace("{count}", String.valueOf(count));
+        String formatted = this.applyPlaceholders(template, punishment, "30 дн.");
+        Component comp = MessageUtil.parse(formatted);
+
+        if (silent) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                if (!player.hasPermission("punish.notifications")) continue;
+                player.sendMessage(comp);
+            }
+            Bukkit.getConsoleSender().sendMessage(comp);
+        } else {
+            Bukkit.broadcast(comp);
+        }
     }
 
     private void kickAllWithIp(String ip, Component reasonComponent) {
