@@ -1,0 +1,144 @@
+name: CustomPunish
+version: '1.0.0'
+main: ru.projectn4.punish.CustomPunishPlugin
+api-version: '1.21'
+author: ProjectN4
+description: Продвинутая система наказаний (ban, banip, mute, kick, history) с базой данных SQLite и гибкими лимитами для LuckPerms
+softdepend:
+  - LuckPerms
+
+commands:
+  ban:
+    description: Заблокировать игрока на сервере
+    usage: /ban <игрок> [срок] [причина] [-s]
+    permission: punish.ban
+  banip:
+    description: Заблокировать игрока или адрес по IP
+    usage: /banip <игрок|IP> [срок] [причина] [-s]
+    permission: punish.banip
+  unban:
+    description: Разблокировать игрока
+    usage: /unban <игрок> [причина]
+    permission: punish.unban
+  unbanip:
+    description: Разблокировать IP-адрес
+    usage: /unbanip <IP> [причина]
+    permission: punish.unbanip
+  mute:
+    description: Заблокировать чат игроку
+    usage: /mute <игрок> [срок] [причина] [-s]
+    permission: punish.mute
+  unmute:
+    description: Снять блокировку чата с игрока
+    usage: /unmute <игрок> [причина]
+    permission: punish.unmute
+  kick:
+    description: Исключить игрока с сервера
+    usage: /kick <игрок> [причина] [-s]
+    permission: punish.kick
+  history:
+    description: Просмотреть историю наказаний игрока
+    usage: /history <игрок> [страница]
+    permission: punish.history
+  punish:
+    description: Управление плагином наказаний
+    usage: /punish [reload|help]
+    permission: punish.reload
+
+permissions:
+  punish.admin:
+    description: Полный доступ ко всем функциям плагина и бессрочным наказаниям
+    default: op
+  punish.exempt:
+    description: Иммунитет от любых наказаний (баны, муты, кики)
+    default: false
+  punish.exempt.bypass:
+    description: Право наказывать игроков с иммунитетом
+    default: op
+  punish.notifications:
+    description: Получение оповещений о тихих наказаниях (-s)
+    default: op
+  punish.silent:
+    description: Использование флага -s для тихих наказаний
+    default: op
+  punish.ban:
+    description: Право на команду /ban
+    default: op
+  punish.banip:
+    description: Право на команду /banip
+    default: op
+  punish.unban:
+    description: Право на команду /unban
+    default: op
+  punish.unbanip:
+    description: Право на команду /unbanip
+    default: op
+  punish.mute:
+    description: Право на команду /mute
+    default: op
+  punish.unmute:
+    description: Право на команду /unmute
+    default: op
+  punish.kick:
+    description: Право на команду /kick
+    default: op
+  punish.history:
+    description: Право на команду /history
+    default: op
+  punish.reload:
+    description: Право на команду /punish reload
+    default: op
+  punish.limit.ban.15m:
+    description: Лимит бана 15 минут
+    default: false
+  punish.limit.ban.30m:
+    description: Лимит бана 30 минут
+    default: false
+  punish.limit.ban.1h:
+    description: Лимит бана 1 час
+    default: false
+  punish.limit.ban.2h:
+    description: Лимит бана 2 часа
+    default: false
+  punish.limit.ban.1d:
+    description: Лимит бана 1 день
+    default: false
+  punish.limit.ban.3d:
+    description: Лимит бана 3 дня
+    default: false
+  punish.limit.ban.7d:
+    description: Лимит бана 7 дней
+    default: false
+  punish.limit.ban.10d:
+    description: Лимит бана 10 дней
+    default: false
+  punish.limit.ban.30d:
+    description: Лимит бана 30 дней
+    default: false
+  punish.limit.ban.permanent:
+    description: Разрешить банить навсегда
+    default: false
+  punish.limit.mute.15m:
+    description: Лимит мута 15 минут
+    default: false
+  punish.limit.mute.30m:
+    description: Лимит мута 30 минут
+    default: false
+  punish.limit.mute.1h:
+    description: Лимит мута 1 час
+    default: false
+  punish.limit.mute.2h:
+    description: Лимит мута 2 часа
+    default: false
+  punish.limit.mute.1d:
+    description: Лимит мута 1 день
+    default: false
+  punish.limit.mute.7d:
+    description: Лимит мута 7 дней
+    default: false
+  punish.limit.mute.14d:
+    description: Лимит мута 14 дней
+    default: false
+  punish.limit.mute.permanent:
+    description: Разрешить мутить навсегда
+    default: false
