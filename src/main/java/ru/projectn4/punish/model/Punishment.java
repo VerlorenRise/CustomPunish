@@ -22,8 +22,9 @@ public class Punishment {
     private String unpunishedByName;
     private String unpunishReason;
     private Long unpunishedAt;
+    private boolean notifiedOffline = true;
 
-    public Punishment(int id, UUID targetUuid, String targetName, String targetIp, PunishmentType type, UUID operatorUuid, String operatorName, String reason, long createdAt, long expiresAt, boolean active, UUID unpunishedByUuid, String unpunishedByName, String unpunishReason, Long unpunishedAt) {
+    public Punishment(int id, UUID targetUuid, String targetName, String targetIp, PunishmentType type, UUID operatorUuid, String operatorName, String reason, long createdAt, long expiresAt, boolean active, UUID unpunishedByUuid, String unpunishedByName, String unpunishReason, Long unpunishedAt, boolean notifiedOffline) {
         this.id = id;
         this.targetUuid = targetUuid;
         this.targetName = targetName;
@@ -39,6 +40,11 @@ public class Punishment {
         this.unpunishedByName = unpunishedByName;
         this.unpunishReason = unpunishReason;
         this.unpunishedAt = unpunishedAt;
+        this.notifiedOffline = notifiedOffline;
+    }
+
+    public Punishment(int id, UUID targetUuid, String targetName, String targetIp, PunishmentType type, UUID operatorUuid, String operatorName, String reason, long createdAt, long expiresAt, boolean active, UUID unpunishedByUuid, String unpunishedByName, String unpunishReason, Long unpunishedAt) {
+        this(id, targetUuid, targetName, targetIp, type, operatorUuid, operatorName, reason, createdAt, expiresAt, active, unpunishedByUuid, unpunishedByName, unpunishReason, unpunishedAt, true);
     }
 
     public Punishment(UUID targetUuid, String targetName, String targetIp, PunishmentType type, UUID operatorUuid, String operatorName, String reason, long createdAt, long expiresAt) {
@@ -146,6 +152,14 @@ public class Punishment {
         }
         long diff = this.expiresAt - System.currentTimeMillis();
         return Math.max(0L, diff);
+    }
+
+    public boolean isNotifiedOffline() {
+        return this.notifiedOffline;
+    }
+
+    public void setNotifiedOffline(boolean notifiedOffline) {
+        this.notifiedOffline = notifiedOffline;
     }
 }
 

@@ -145,6 +145,7 @@ messages:
     unmuted: "&aС вас была снята блокировка чата. Приятной игры!"
     warn-received-chat: "&cВы получили варн &e[{count}/3]&c от &b{operator}&c. Причина: &f{reason}"
     unwarned: "&aС вас было снято предупреждение. Причина: &7{reason}"
+    offline-punishment: "&cАдминистратор &b{operator} &cВыдал вам в оффлайне &e{type}&c Причина: &f{reason}&c. Истекает через: &e{remaining}"
 
   # Подсказки по использованию команд
   usage:

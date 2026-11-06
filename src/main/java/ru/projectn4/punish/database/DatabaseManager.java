@@ -64,6 +64,10 @@ public class DatabaseManager {
             statement.execute("    CREATE TABLE IF NOT EXISTS player_data (\n        uuid VARCHAR(36) PRIMARY KEY,\n        name VARCHAR(64) NOT NULL,\n        last_ip VARCHAR(45) NOT NULL,\n        last_seen BIGINT NOT NULL\n    );\n");
             statement.execute("CREATE INDEX IF NOT EXISTS idx_player_data_name ON player_data (name);");
             statement.execute("CREATE INDEX IF NOT EXISTS idx_player_data_ip ON player_data (last_ip);");
+            try {
+                statement.execute("ALTER TABLE punishments ADD COLUMN notified_offline INTEGER DEFAULT 1;");
+            } catch (SQLException ignored) {
+            }
         }
         this.plugin.getLogger().info("База данных SQLite успешно подключена и инициализирована.");
     }
@@ -143,7 +147,7 @@ public class DatabaseManager {
 
     public CompletableFuture<Punishment> insertPunishment(Punishment punishment) {
         return CompletableFuture.supplyAsync(() -> {
-            String sql = "    INSERT INTO punishments (\n        target_uuid, target_name, target_ip, punish_type,\n        operator_uuid, operator_name, reason, created_at,\n        expires_at, active\n    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1);\n";
+            String sql = "    INSERT INTO punishments (\n        target_uuid, target_name, target_ip, punish_type,\n        operator_uuid, operator_name, reason, created_at,\n        expires_at, active, notified_offline\n    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?);\n";
             try (PreparedStatement ps = this.getConnection().prepareStatement(sql, 1)) {
                 ps.setString(1, punishment.getTargetUuid() != null ? punishment.getTargetUuid().toString() : null);
                 ps.setString(2, punishment.getTargetName());
@@ -154,6 +158,7 @@ public class DatabaseManager {
                 ps.setString(7, punishment.getReason());
                 ps.setLong(8, punishment.getCreatedAt());
                 ps.setLong(9, punishment.getExpiresAt());
+                ps.setInt(10, punishment.isNotifiedOffline() ? 1 : 0);
                 ps.executeUpdate();
                 try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
@@ -469,6 +474,46 @@ public class DatabaseManager {
         }, this.asyncExecutor);
     }
 
+    public CompletableFuture<List<Punishment>> getUnnotifiedOfflinePunishments(UUID targetUuid, String targetName) {
+        return CompletableFuture.supplyAsync(() -> {
+            ArrayList<Punishment> list = new ArrayList<>();
+            long now = System.currentTimeMillis();
+            String sql = targetUuid != null ?
+                "SELECT * FROM punishments WHERE (target_uuid = ? OR LOWER(target_name) = LOWER(?)) AND active = 1 AND notified_offline = 0 AND (punish_type = 'WARN' OR punish_type = 'MUTE') AND (expires_at = -1 OR expires_at > ?) ORDER BY id ASC;" :
+                "SELECT * FROM punishments WHERE LOWER(target_name) = LOWER(?) AND active = 1 AND notified_offline = 0 AND (punish_type = 'WARN' OR punish_type = 'MUTE') AND (expires_at = -1 OR expires_at > ?) ORDER BY id ASC;";
+            try (PreparedStatement ps = this.getConnection().prepareStatement(sql)) {
+                if (targetUuid != null) {
+                    ps.setString(1, targetUuid.toString());
+                    ps.setString(2, targetName);
+                    ps.setLong(3, now);
+                } else {
+                    ps.setString(1, targetName);
+                    ps.setLong(2, now);
+                }
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        list.add(this.mapPunishment(rs));
+                    }
+                }
+            } catch (SQLException e) {
+                this.plugin.getLogger().log(Level.SEVERE, "Ошибка получения оффлайн-наказаний для: " + targetName, e);
+            }
+            return list;
+        }, this.asyncExecutor);
+    }
+
+    public CompletableFuture<Void> markPunishmentNotified(int id) {
+        return CompletableFuture.runAsync(() -> {
+            String sql = "UPDATE punishments SET notified_offline = 1 WHERE id = ?;";
+            try (PreparedStatement ps = this.getConnection().prepareStatement(sql)) {
+                ps.setInt(1, id);
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                this.plugin.getLogger().log(Level.SEVERE, "Ошибка обновления статуса уведомления для ID: " + id, e);
+            }
+        }, this.asyncExecutor);
+    }
+
     private Punishment mapPunishment(ResultSet rs) throws SQLException {
         int id = rs.getInt("id");
         String uuidStr = rs.getString("target_uuid");
@@ -488,7 +533,11 @@ public class DatabaseManager {
         String unpunishReason = rs.getString("unpunish_reason");
         long unpunishedAtVal = rs.getLong("unpunished_at");
         Long unpunishedAt = rs.wasNull() ? null : Long.valueOf(unpunishedAtVal);
-        return new Punishment(id, targetUuid, targetName, targetIp, type, operatorUuid, operatorName, reason, createdAt, expiresAt, active, unpunishedByUuid, unpunishedByName, unpunishReason, unpunishedAt);
+        boolean notifiedOffline = true;
+        try {
+            notifiedOffline = rs.getInt("notified_offline") == 1;
+        } catch (SQLException ignored) {}
+        return new Punishment(id, targetUuid, targetName, targetIp, type, operatorUuid, operatorName, reason, createdAt, expiresAt, active, unpunishedByUuid, unpunishedByName, unpunishReason, unpunishedAt, notifiedOffline);
     }
 
     private PlayerData mapPlayerData(ResultSet rs) throws SQLException {

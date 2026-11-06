@@ -239,7 +239,9 @@ public class PunishmentService {
         String opName = operator.getName();
         long now = System.currentTimeMillis();
         long expiresAt = durationMillis <= 0L ? -1L : now + durationMillis;
+        boolean isOnlineMute = (targetUuid != null && Bukkit.getPlayer(targetUuid) != null) || Bukkit.getPlayerExact(targetName) != null;
         Punishment punishment = new Punishment(targetUuid, targetName, null, PunishmentType.MUTE, opUuid, opName, reason, now, expiresAt);
+        punishment.setNotifiedOffline(isOnlineMute);
         return this.databaseManager.insertPunishment(punishment).thenApply(inserted -> {
             if (targetUuid != null) {
                 this.activeMutesByUuid.put(targetUuid, (Punishment)inserted);
@@ -364,7 +366,9 @@ public class PunishmentService {
         long now = System.currentTimeMillis();
         long expiresAt = now + WARN_DURATION_MILLIS;
 
+        boolean isOnlineWarn = (targetUuid != null && Bukkit.getPlayer(targetUuid) != null) || Bukkit.getPlayerExact(targetName) != null;
         Punishment punishment = new Punishment(targetUuid, targetName, null, PunishmentType.WARN, opUuid, opName, reason, now, expiresAt);
+        punishment.setNotifiedOffline(isOnlineWarn);
         return this.databaseManager.insertPunishment(punishment).thenCompose(inserted -> {
             return this.databaseManager.getActiveWarnsCount(targetUuid, targetName).thenCompose(warnCount -> {
                 Player online = targetUuid != null ? Bukkit.getPlayer(targetUuid) : Bukkit.getPlayerExact(targetName);

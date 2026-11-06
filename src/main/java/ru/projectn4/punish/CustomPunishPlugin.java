@@ -65,7 +65,7 @@ extends JavaPlugin {
         this.permissionManager = new PermissionManager(this.configManager);
         this.punishmentService = new PunishmentService(this, this.databaseManager, this.configManager);
         this.punishmentService.loadActiveMutes();
-        this.getServer().getPluginManager().registerEvents((Listener)new LoginListener(this.databaseManager, this.punishmentService), (Plugin)this);
+        this.getServer().getPluginManager().registerEvents((Listener)new LoginListener(this, this.databaseManager, this.punishmentService, this.configManager), (Plugin)this);
         this.getServer().getPluginManager().registerEvents((Listener)new ChatListener(this.punishmentService), (Plugin)this);
         this.getServer().getPluginManager().registerEvents((Listener)new CommandListener(this.punishmentService, this.configManager), (Plugin)this);
         this.registerCommand("ban", new BanCommand(this.punishmentService, this.permissionManager, this.configManager));
