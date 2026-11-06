@@ -1,5 +1,5 @@
 name: CustomPunish
-version: '1.0.0'
+version: '0.11.0'
 main: ru.projectn4.punish.CustomPunishPlugin
 api-version: '1.21'
 author: ProjectN4

@@ -5,7 +5,7 @@
 
     <groupId>ru.projectn4</groupId>
     <artifactId>custompunish</artifactId>
-    <version>1.0.0</version>
+    <version>0.11.0</version>
     <packaging>jar</packaging>
 
     <name>CustomPunish</name>
